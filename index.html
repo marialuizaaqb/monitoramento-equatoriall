@@ -1185,11 +1185,19 @@ async function exportRegCSV(tipo,reg,secc,devId){
 window.exportRegCSV=exportRegCSV;
 
 function csvDL(rows,fname){
-  const csv="﻿"+rows.map(r=>r.map(v=>'"'+String(v||"").replace(/"/g,'""')+'"').join(";")).join("
-");
-  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download=fname+".csv";a.click();
+  const csv = "\uFEFF" + rows
+    .map(r =>
+      r.map(v => '"' + String(v || "").replace(/"/g,'""') + '"').join(";")
+    )
+    .join("\n");
+
+  const a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = fname + ".csv";
+  a.click();
 }
-window.csvDL=csvDL;
+
+window.csvDL = csvDL;
 
 togObs();
 </script>
