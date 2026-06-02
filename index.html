@@ -148,6 +148,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="fl"><label class="fll">Prazo</label><select id="dPrazo" onchange="loadDevGrid()"><option value="">Todos</option><option value="no_prazo">No prazo</option><option value="fora_prazo">Fora do prazo</option></select></div>
         <div class="fl"><label class="fll">Área</label><select id="dArea" onchange="loadDevGrid()"><option value="">Todas</option><option>OPERAÇÃO</option><option>MANUTENÇÃO</option><option>OBRAS</option><option>PROTEÇÃO</option><option>STC</option><option>CADASTRO</option></select></div>
         <div class="fl"><label class="fll">Responsável</label><select id="dResp" onchange="loadDevGrid()"><option value="">Todos</option><option>OPERAÇÃO</option><option>MANUTENÇÃO</option><option>OBRAS</option><option>PROTEÇÃO</option><option>STC</option><option>CADASTRO</option></select></div>
+        <div class="fl"><label class="fll">Criado por</label><select id="dUser" onchange="loadDevGrid()"><option value="">Todos</option></select></div>
         <div class="fl"><label class="fll">Buscar</label><input type="text" id="dSrch" placeholder="Dispositivo..." oninput="loadDevGrid()"></div>
       </div>
       <div class="dg" id="devGrid"></div>
@@ -189,6 +190,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="fl"><label class="fll">Área</label><select id="lArea" onchange="loadLista()"><option value="">Todas</option><option>OPERAÇÃO</option><option>MANUTENÇÃO</option><option>OBRAS</option><option>PROTEÇÃO</option><option>STC</option><option>CADASTRO</option></select></div>
         <div class="fl"><label class="fll">Status</label><select id="lStat" onchange="loadLista()"><option value="">Todos</option><option value="pendente">Pendente</option><option value="em andamento">Em andamento</option><option value="concluída">Concluída</option></select></div>
         <div class="fl"><label class="fll">Prazo</label><select id="lPrazo" onchange="loadLista()"><option value="">Todos</option><option value="no_prazo">No prazo</option><option value="fora_prazo">Fora do prazo</option></select></div>
+        <div class="fl"><label class="fll">Criado por</label><select id="lUser" onchange="loadLista()"><option value="">Todos</option></select></div>
         <button class="btn btn-in btn-sm" onclick="exportLista()" style="align-self:flex-end">⬇ Exportar CSV</button>
       </div>
       <div id="listaContent"></div>
@@ -203,6 +205,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div class="fl"><label class="fll">Prazo</label><select id="pPrazo" onchange="updPDevs()"><option value="">Todos</option><option value="no_prazo">No prazo</option><option value="fora_prazo">Fora do prazo</option></select></div>
         <div class="fl"><label class="fll">Área</label><select id="pArea" onchange="updPDevs()"><option value="">Todas</option><option>OPERAÇÃO</option><option>MANUTENÇÃO</option><option>OBRAS</option><option>PROTEÇÃO</option><option>STC</option><option>CADASTRO</option></select></div>
         <div class="fl"><label class="fll">Responsável</label><select id="pResp" onchange="updPDevs()"><option value="">Todos</option><option>OPERAÇÃO</option><option>MANUTENÇÃO</option><option>OBRAS</option><option>PROTEÇÃO</option><option>STC</option><option>CADASTRO</option></select></div>
+        <div class="fl"><label class="fll">Criado por</label><select id="pUser" onchange="loadPlanoAcoes()"><option value="">Todos</option></select></div>
         <div class="fl"><label class="fll">Dispositivo</label><select id="pDev" onchange="loadPlanoAcoes()"><option value="">Selecione...</option></select></div>
       </div>
       <div id="planoContent"></div>
@@ -259,7 +262,7 @@ const USERS_MAP={"admin.rafaeloliveira@equatorial.com": {"nome": "Rafael Oliveir
 const AREAS=['OPERAÇÃO','MANUTENÇÃO','OBRAS','PROTEÇÃO','STC'];
 const AICONS={OPERAÇÃO:'⚡',MANUTENÇÃO:'🔧',OBRAS:'🏗️',PROTEÇÃO:'🛡️',STC:'👥',CADASTRO:'📋'};
 const AREA_COLORS={OPERAÇÃO:'#60a5fa',MANUTENÇÃO:'#f5a623',OBRAS:'#a78bfa',PROTEÇÃO:'#34d399',STC:'#f87171',CADASTRO:'#94a3b8'};
-const SECCIONAIS={NORTE:['Porto Alegre','Osorio','Guaiba'],SUL:['Pelotas','Bage','Camaqua','Canguçu','Rio Grande']};
+const SECCIONAIS={NORTE:['Metropolitana','Litoral Norte','Carbonífera'],SUL:['Sul','Campanha','Centro Sul','Litoral Sul']};
 const TOTAL_FORMS_MAX=DEVICES.length*AREAS.length; // 158 × 5 = 790
 
 const PERGUNTAS={
@@ -352,19 +355,40 @@ onAuthStateChanged(auth,async user=>{
 
 // ── PIE ──────────────────────────────────────────────────────────────────
 function pie(data,size=110,total_override){
-  const total=total_override||data.reduce((s,d)=>s+d.v,0);
   const display_total=data.reduce((s,d)=>s+d.v,0);
-  if(!total)return`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2-6}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/><text x="${size/2}" y="${size/2+4}" text-anchor="middle" font-size="10" fill="#3a4e6e">—</text></svg>`;
-  const cx=size/2,cy=size/2,r=size/2-7;let paths="",start=0;
-  // Add empty segment if display_total < total
+  const total=total_override||display_total;
+  // Build segments — add empty remainder if needed
   const segments=[...data];
-  if(total_override&&display_total<total_override){segments.push({v:total_override-display_total,c:"rgba(255,255,255,0.05)"});}
-  segments.forEach(d=>{if(!d.v)return;const a=d.v/total*2*Math.PI;
-    if(d.v===total&&segments.length===1){paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${d.c}"/>`;start+=a;return;}
-    const x1=cx+r*Math.sin(start),y1=cy-r*Math.cos(start),x2=cx+r*Math.sin(start+a),y2=cy-r*Math.cos(start+a);
-    paths+=`<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${a>Math.PI?1:0},1 ${x2},${y2} Z" fill="${d.c}"/>`;start+=a;});
+  if(total_override&&display_total<total_override){
+    segments.push({v:total_override-display_total,c:"rgba(255,255,255,0.05)"});
+  }
+  const seg_total=segments.reduce((s,d)=>s+d.v,0);
+  // Empty state or all-zero — transparent ring
+  if(!seg_total||(!display_total&&total_override)){
+    const cx=size/2,cy=size/2,r=size/2-7,ir=r*0.52;
+    const t=total_override||0;
+    return`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <circle cx="${cx}" cy="${cy}" r="${ir}" fill="var(--sf)"/>
+      <text x="${cx}" y="${cx-2}" text-anchor="middle" font-size="13" font-weight="700" fill="#3a4e6e">${t||0}</text>
+      <text x="${cx}" y="${cx+10}" text-anchor="middle" font-size="8" fill="#3a4e6e">total</text>
+    </svg>`;
+  }
+  const cx=size/2,cy=size/2,r=size/2-7;let paths="",start=0;
+  segments.forEach(d=>{
+    if(!d.v)return;
+    const a=d.v/seg_total*2*Math.PI;
+    if(a>=2*Math.PI-0.001){
+      paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${d.c}"/>`;
+      start+=a;return;
+    }
+    const x1=cx+r*Math.sin(start),y1=cy-r*Math.cos(start);
+    const x2=cx+r*Math.sin(start+a),y2=cy-r*Math.cos(start+a);
+    paths+=`<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${a>Math.PI?1:0},1 ${x2},${y2} Z" fill="${d.c}"/>`;
+    start+=a;
+  });
   const ir=r*0.52;
-  return`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths}<circle cx="${cx}" cy="${cy}" r="${ir}" fill="var(--sf)"/><text x="${cx}" y="${cx-2}" text-anchor="middle" font-size="13" font-weight="700" fill="#e8edf8">${total_override||display_total}</text><text x="${cx}" y="${cx+10}" text-anchor="middle" font-size="8" fill="#7a90b8">total</text></svg>`;
+  return`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths}<circle cx="${cx}" cy="${cy}" r="${ir}" fill="var(--sf)"/><text x="${cx}" y="${cx-2}" text-anchor="middle" font-size="13" font-weight="700" fill="#e8edf8">${total}</text><text x="${cx}" y="${cx+10}" text-anchor="middle" font-size="8" fill="#7a90b8">total</text></svg>`;
 }
 function legHTML(items,total){
   const t=total||items.reduce((s,i)=>s+i.v,0);
@@ -419,6 +443,10 @@ async function loadStats(){
     <div class="rc" onclick="showRegional('SUL')"><div class="ri" style="background:rgba(52,211,153,0.12)">🟢</div><div><div style="font-size:14px;font-weight:700">Regional SUL</div><div class="tm" style="font-size:12px;margin-top:2px">${rS.SUL.t} disp. · ${rS.SUL.a} ações · ${rS.SUL.gotF}/${rS.SUL.maxF} forms</div></div></div>`;
   $("rmN").textContent=`${rS.NORTE.t} disp. · ${rS.NORTE.gotF}/${rS.NORTE.maxF} forms · ${rS.NORTE.a} ações`;
   $("rmS").textContent=`${rS.SUL.t} disp. · ${rS.SUL.gotF}/${rS.SUL.maxF} forms · ${rS.SUL.a} ações`;
+  // Populate user dropdowns from all acoes
+  const allUsers=[...new Set(aa.map(a=>a.criado_por||"").filter(Boolean))].sort();
+  const userOpts="<option value=''>Todos</option>"+allUsers.map(u=>`<option>${u}</option>`).join("");
+  [$("lUser"),$("dUser"),$("pUser")].forEach(el=>{if(el)el.innerHTML=userOpts;});
 }
 
 // ── AREA ROSCA SUMMARY ────────────────────────────────────────────────────
@@ -440,8 +468,8 @@ function areaRoscaHTML(acoes,forms,devIds,title){
       {v:ac.filter(a=>isOD(a.prazo,a.status)&&a.status==="pendente").length,c:"#dc2626",l:"Fora Prazo — Pendente"},
     ];
     const fCats=[{v:fm,c:col,l:"Preenchidos"},{v:devCount-fm,c:"rgba(255,255,255,0.06)",l:"Não preenchidos"}];
-    return`<div class="area-rosca-card" style="border-top:3px solid ${col}">
-      <div class="area-rosca-title">${AICONS[ar]} ${ar}</div>
+    return`<div class="area-rosca-card" style="border-top:3px solid ${col};cursor:pointer;transition:all .15s" onclick="openAreaLista('${ar}',curReg,curSecc)" onmouseover="this.style.borderColor='${col}';this.style.background='var(--sf2)'" onmouseout="this.style.background=''">
+      <div class="area-rosca-title" style="justify-content:space-between">${AICONS[ar]} ${ar}<span style="font-size:10px;color:var(--tx3);font-weight:400">Ver ações →</span></div>
       <div class="area-rosca-row">
         <div>${pie(aCats,80)}</div>
         <div class="leg" style="font-size:10px">${aCats.filter(c=>c.v>0).map(c=>`<div class="li"><div class="ld" style="background:${c.c}"></div><span>${c.l}: <strong>${c.v}</strong> (${tA?Math.round(c.v/tA*100):0}%)</span></div>`).join("")}${tA===0?`<div style="color:var(--tx3);font-size:10px">Sem ações</div>`:""}</div>
@@ -482,7 +510,9 @@ async function loadDevGrid(){
   const cards=devs.map(d=>{
     let ac=allAcoesCache.filter(a=>a.ofensor_id===d.ID);
     if(stat)ac=ac.filter(a=>a.status===stat);if(prazo==="no_prazo")ac=ac.filter(a=>!isOD(a.prazo,a.status));if(prazo==="fora_prazo")ac=ac.filter(a=>isOD(a.prazo,a.status));if(area)ac=ac.filter(a=>(a.area_responsavel||a.area||"")===area);if(resp)ac=ac.filter(a=>(a.area_responsavel||a.area||"")===resp);
-    if((stat||prazo||area||resp)&&ac.length===0&&allAcoesCache.filter(a=>a.ofensor_id===d.ID).length>0)return null;
+    const dUserF=($("dUser")||{}).value||"";
+    if(dUserF)ac=ac.filter(a=>(a.criado_por||"")===dUserF);
+    if((stat||prazo||area||resp||dUserF)&&ac.length===0&&allAcoesCache.filter(a=>a.ofensor_id===d.ID).length>0)return null;
     const all=allAcoesCache.filter(a=>a.ofensor_id===d.ID);const atras=all.filter(a=>isOD(a.prazo,a.status)).length;const conc=all.filter(a=>a.status==="concluída").length;const pct=all.length?Math.round(conc/all.length*100):0;
     return`<div class="dc" onclick="showDevice('${d.ID}','dispositivos')">
       ${atras>0?`<span class="badge bd2" style="position:absolute;top:8px;right:8px">${atras}⚠</span>`:""}
@@ -758,6 +788,8 @@ async function loadLista(){
   if(stat)acoes=acoes.filter(a=>a.status===stat);
   if(prazo==="no_prazo")acoes=acoes.filter(a=>!isOD(a.prazo,a.status));
   if(prazo==="fora_prazo")acoes=acoes.filter(a=>isOD(a.prazo,a.status));
+  const userF=($("lUser")||{}).value||"";
+  if(userF)acoes=acoes.filter(a=>(a.criado_por||"")=== userF);
 
   const byArea={};AREAS.forEach(ar=>{byArea[ar]=[];});acoes.forEach(a=>{const ar=a.area_responsavel||a.area||"Outros";if(!byArea[ar])byArea[ar]=[];byArea[ar].push(a);});
   let html="";
@@ -818,6 +850,27 @@ async function exportLista(){
   csvDL([["Regional","Seccional","Conjunto","Elegível?","TIPO","ID","Ofensor","Área","Área Resp.","Descrição","Status","Prazo","Previsão","Identificação","Criado Em","Criado Por","Cargo","Modificado Em","Modificado Por","Observação"],...rows],"lista_acoes");
 }
 window.exportLista=exportLista;
+
+// Open Lista de Ações pre-filtered by area (and optionally reg/secc)
+function openAreaLista(area, reg, secc){
+  // Navigate to lista screen
+  document.querySelectorAll(".ni").forEach(n=>n.classList.remove("active"));
+  const nb=$("nav-lista");if(nb)nb.classList.add("active");
+  $("tbTitle").textContent="Lista de Ações";
+  showScreen("lista");
+  // Update secc dropdown first
+  const seccList=SECCIONAIS[reg]||[...new Set(DEVICES.filter(d=>!reg||d.Regional===reg).map(d=>d.Seccional))].sort();
+  $("lSecc").innerHTML="<option value=''>Todas</option>"+seccList.map(s=>`<option>${s}</option>`).join("");
+  // Set filter values
+  if($("lReg"))$("lReg").value=reg||"";
+  if($("lSecc"))$("lSecc").value=secc||"";
+  if($("lArea"))$("lArea").value=area||"";
+  if($("lStat"))$("lStat").value="";
+  if($("lPrazo"))$("lPrazo").value="";
+  if($("lUser"))$("lUser").value="";
+  loadLista();
+}
+window.openAreaLista=openAreaLista;
 
 // ── FORM ──────────────────────────────────────────────────────────────────
 function showFormSelector(){
@@ -927,6 +980,7 @@ async function loadPlanoAcoes(){
   editDevId=id;const stat=$("pStat").value,prazo=$("pPrazo").value,area=$("pArea").value,resp=$("pResp").value;
   let acoes=await getAcoes(id);
   if(stat)acoes=acoes.filter(a=>a.status===stat);if(prazo==="no_prazo")acoes=acoes.filter(a=>!isOD(a.prazo,a.status));if(prazo==="fora_prazo")acoes=acoes.filter(a=>isOD(a.prazo,a.status));if(area)acoes=acoes.filter(a=>(a.area_responsavel||a.area||"")===area);if(resp)acoes=acoes.filter(a=>(a.area_responsavel||a.area||"")===resp);
+  const pUserF=($("pUser")||{}).value||"";if(pUserF)acoes=acoes.filter(a=>(a.criado_por||"")===pUserF);
   if(!acoes.length){$("planoContent").innerHTML=`<div class="card" style="text-align:center;padding:2rem;color:var(--tx2)">Nenhuma ação com esses filtros.</div>`;return;}
   $("planoContent").innerHTML=`<div class="card" style="padding:0 17px"><div class="al">${acoes.map(a=>aRowHTML(a,id)).join("")}</div></div>`;
 }
