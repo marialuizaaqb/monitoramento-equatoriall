@@ -450,7 +450,8 @@ async function loadStats(){
 }
 
 // ── AREA ROSCA SUMMARY ────────────────────────────────────────────────────
-function areaRoscaHTML(acoes,forms,devIds,title){
+function areaRoscaHTML(acoes,forms,devIds,title,_reg,_secc){
+  _reg=_reg||"";_secc=_secc||"";
   const devCount=devIds.length;
   const cards=AREAS.map(ar=>{
     const ac=acoes.filter(a=>(a.area_responsavel||a.area||"")===ar);
@@ -468,7 +469,7 @@ function areaRoscaHTML(acoes,forms,devIds,title){
       {v:ac.filter(a=>isOD(a.prazo,a.status)&&a.status==="pendente").length,c:"#dc2626",l:"Fora Prazo — Pendente"},
     ];
     const fCats=[{v:fm,c:col,l:"Preenchidos"},{v:devCount-fm,c:"rgba(255,255,255,0.06)",l:"Não preenchidos"}];
-    return`<div class="area-rosca-card" style="border-top:3px solid ${col};cursor:pointer;transition:all .15s" onclick="openAreaLista('${ar}',curReg,curSecc)" onmouseover="this.style.borderColor='${col}';this.style.background='var(--sf2)'" onmouseout="this.style.background=''">
+    return`<div class="area-rosca-card" style="border-top:3px solid ${col};cursor:pointer;transition:all .15s" onclick="openAreaLista('${ar}','${_reg}','${_secc}')" onmouseover="this.style.borderColor='${col}';this.style.background='var(--sf2)'" onmouseout="this.style.background=''">
       <div class="area-rosca-title" style="justify-content:space-between">${AICONS[ar]} ${ar}<span style="font-size:10px;color:var(--tx3);font-weight:400">Ver ações →</span></div>
       <div class="area-rosca-row">
         <div>${pie(aCats,80)}</div>
@@ -585,7 +586,7 @@ async function showRegional(reg){
         <div class="sc-card cc-r" style="margin-bottom:0"><div class="slb">Em atraso</div><div class="svl" style="color:var(--dg);font-size:20px">${regAcoes.filter(a=>isOD(a.prazo,a.status)).length}</div></div>
       </div></div>
     </div>
-    ${areaRoscaHTML(regAcoes,regForms,ids,"Resumo por Área")}
+    ${areaRoscaHTML(regAcoes,regForms,ids,"Resumo por Área",reg,"")}
     <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px">Seccionais</div>
     <div class="sg">${seccCards}</div>
     <div style="font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 9px">Todos os Dispositivos</div>
@@ -634,7 +635,7 @@ async function showSeccional(reg,secc){
         <div class="sc-card cc-r" style="margin-bottom:0"><div class="slb">Em atraso</div><div class="svl" style="color:var(--dg);font-size:20px">${seccAcoes.filter(a=>isOD(a.prazo,a.status)).length}</div></div>
       </div></div>
     </div>
-    ${areaRoscaHTML(seccAcoes,seccForms,ids,"Resumo por Área")}
+    ${areaRoscaHTML(seccAcoes,seccForms,ids,"Resumo por Área",reg,secc)}
     <div class="fb">
       <div class="fl"><label class="fll">Status</label><select id="seccStat" onchange="seccApplyFilter()"><option value="">Todos</option><option value="pendente">Pendente</option><option value="em andamento">Em andamento</option><option value="concluída">Concluída</option></select></div>
       <div class="fl"><label class="fll">Prazo</label><select id="seccPrazo" onchange="seccApplyFilter()"><option value="">Todos</option><option value="no_prazo">No prazo</option><option value="fora_prazo">Fora do prazo</option></select></div>
